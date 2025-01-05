@@ -1,0 +1,417 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+#import the movie data
+data <- read.csv("movies.csv")
+colnames(data)
+head(data[c("title", "release_date", "genres", "popularity", "budget","revenue","runtime","vote_average","vote_count")], 5)
+```
+
+```{r}
+data$release_date <- as.Date(data$release_date)
+```
+
+```{r}
+shape <- dim(data)
+# Print the number of rows and columns
+cat("Number of rows:", shape[1], "\n")
+cat("Number of columns:", shape[2], "\n")
+```
+
+```{r}
+# Check for missing values in budget and revenue
+missing_budget <- sum(is.na(data$budget))
+missing_revenue <- sum(is.na(data$revenue))
+missing_pop <- sum(is.na(data$popularity))
+missing_runtime <- sum(is.na(data$runtime))
+missing_date <- sum(is.na(data$release_date))
+
+# Check for zero or negative values in budget and revenue
+zero_or_negative_budget <- sum(data$budget <= 0, na.rm = TRUE)
+zero_or_negative_revenue <- sum(data$revenue <= 0, na.rm = TRUE)
+zero_or_negative_pop <- sum(data$popularity <= 0, na.rm = TRUE)
+zero_or_negative_runtime <- sum(data$runtime <= 0, na.rm = TRUE)
+zero_or_negative_release_date <- sum(data$release_date <= 0, na.rm = TRUE)
+
+# Print the results
+cat("Missing values in Budget:", missing_budget/shape[1]*100, "%\n")
+cat("Missing values in Revenue:", missing_revenue/shape[1]*100, "%\n")
+cat("Missing values in Popularity:", missing_pop/shape[1]*100, "%\n")
+cat("Missing values in Run time:", missing_runtime/shape[1]*100, "%\n")
+cat("Missing values in Date:", missing_date/shape[1]*100, "%\n")
+cat("Zero or Negative values in Budget:", zero_or_negative_budget/shape[1]*100, "%\n")
+cat("Zero or Negative values in Revenue:", zero_or_negative_revenue/shape[1]*100, "%\n")
+cat("Zero or Negative values in Popularity:", zero_or_negative_pop/shape[1]*100, "%\n")
+cat("Zero or Negative values in Run time:", zero_or_negative_runtime/shape[1]*100, "%\n")
+cat("Zero or Negative values in Date:", zero_or_negative_release_date/shape[1]*100, "%\n")
+
+#non_zero_budget_rows <- shape[1]-zero_or_negative_budget
+#cat("Non zero budget columns:", non_zero_budget_rows)
+```
+
+
+
+```{r}
+#set the budget and revenue in terms of millions
+data$budget <- data$budget/10e6
+data$revenue <- data$revenue/10e6
+```
+
+```{r}
+data$profit <- data$revenue - data$budget  # Calculate profit
+data$ROI <- ifelse(data$budget == 0, NA, (data$profit / data$budget) * 100) # Calculate ROI
+head(data[c("title", "budget","revenue","profit","ROI")], 5)
+```
+
+```{r}
+summary(data$budget)
+```
+
+```{r, fig.width=16, fig.height=8}
+# Load necessary libraries
+library(ggplot2)
+library(ggthemes)
+
+# Remove rows with missing or zero revenue if necessary
+cleaned_data <- data[data$revenue > 0, ]
+
+
+# Get top 10 movies by revenue
+top_ten_revenue <- cleaned_data %>%
+  arrange(desc(revenue)) %>%
+  head(10)
+
+# Create a bar plot for top 10 movies by revenue
+ggplot(top_ten_revenue, aes(x = reorder(title, revenue), y = revenue, fill = revenue)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "yellow", high = "green") +
+  geom_text(aes(label = scales::comma(revenue)), hjust =-0.2) +  # Add labels to bars
+  coord_flip() +  # Flip coordinates for horizontal bars
+  labs(title = "Top 10 Movies by Revenue", x = "Movie Title", y = "Revenue ($ millions)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 20, color = "black", face = "bold",hjust=0.1),
+        axis.title.x = element_text(size = 14, color = "black"),
+        axis.title.y = element_text(size = 14, color = "black"),# Modify x-axis title
+        axis.text.x = element_text(size=12,angle = 45, hjust = 1),
+        axis.text.y = element_text(size=12, hjust = 1.06),
+        plot.margin = margin(1, 0, 1, 0, "cm"))
+         # Rotate x-axis labels for readability
+
+```
+
+```{r, fig.width=16, fig.height=8}
+top_ten_revenue_roi <- top_ten_revenue %>%
+  arrange(desc(ROI))
+
+
+ggplot(top_ten_revenue_roi, aes(x = reorder(title, ROI), y = ROI, fill = ROI)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "yellow", high = "green") +
+  geom_text(aes(label = scales::comma(ROI)), hjust =-0.1) +  # Add labels to bars
+  coord_flip() +  # Flip coordinates for horizontal bars
+  labs(title = "ROI of Top 10 Movies by Revenue", x = "Movie Title", y = "ROI (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 20, color = "black", face = "bold",hjust=0.1),
+        axis.title.x = element_text(size = 14, color = "black"),
+        axis.title.y = element_text(size = 14, color = "black"),# Modify x-axis title
+        axis.text.x = element_text(size=12,angle = 45, hjust = 1),
+        axis.text.y = element_text(size=12, hjust = 1.06),
+        plot.margin = margin(1, 0, 1, 0, "cm"))
+         # Rotate x-axis labels for readability
+```
+
+```{r, fig.width=16, fig.height=8}
+top_ten_revenue_pop <- top_ten_revenue %>%
+  arrange(desc(popularity))
+
+
+ggplot(top_ten_revenue_pop, aes(x = reorder(title, popularity), y = popularity, fill = popularity)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "purple", high = "red") +
+  geom_text(aes(label = scales::comma(popularity)), hjust =-0.1) +  # Add labels to bars
+  coord_flip() +  # Flip coordinates for horizontal bars
+  labs(title = "Popularity of Top 10 Movies by Revenue", x = "Movie Title", y = "TMDB popularity") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 20, color = "black", face = "bold",hjust=0.1),
+        axis.title.x = element_text(size = 14, color = "black"),
+        axis.title.y = element_text(size = 14, color = "black"),# Modify x-axis title
+        axis.text.x = element_text(size=12,angle = 45, hjust = 1),
+        axis.text.y = element_text(size=12, hjust = 1.06),
+        plot.margin = margin(1, 0, 1, 0, "cm"))
+         # Rotate x-axis labels for readability
+
+```
+
+```{r, fig.width=16, fig.height=8}
+# Load necessary libraries
+library(ggplot2)
+library(ggthemes)
+
+
+# Remove rows with missing or zero revenue if necessary
+cleaned_data <- data[data$popular > 0, ]
+
+# Get top 10 movies by revenue
+top_ten_pop <- cleaned_data %>%
+  arrange(desc(popularity)) %>%
+  head(10)
+
+# Create a bar plot for top 10 movies by revenue
+ggplot(top_ten_pop, aes(x = reorder(title, popularity), y = popularity, fill = popularity)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "purple", high = "red") +
+  geom_text(aes(label = scales::comma(popularity)), hjust =-0.1) +  # Add labels to bars
+  coord_flip() +  # Flip coordinates for horizontal bars
+  labs(title = "Top 10 Movies by Popularity", x = "Movie Title", y = "TMDB popularity") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 20, color = "black", face = "bold",hjust=0.1),
+        axis.title.x = element_text(size = 14, color = "black"),
+        axis.title.y = element_text(size = 14, color = "black"),# Modify x-axis title
+        axis.text.x = element_text(size=12,angle = 45, hjust = 1),
+        axis.text.y = element_text(size=12, hjust = 1.06),
+        plot.margin = margin(1, 0, 1, 0, "cm"))
+         # Rotate x-axis labels for readability
+
+
+```
+
+```{r}
+head(top_ten_pop[c("title", "release_date", "genres")],10)
+
+```
+
+```{r}
+head(top_ten_revenue_pop[c("title", "release_date", "genres")],10)
+```
+
+```{r}
+cleaned_data <- data[data$budget > 0 & data$revenue > 0, ]
+summary(cleaned_data$budget)
+revenue_boxplot <- boxplot(cleaned_data$budget)
+cat("The number of movies in cleaned data: ",nrow(cleaned_data))
+```
+
+```{r}
+top_budget <- cleaned_data %>%
+  arrange(desc(budget)) %>%
+  head(50)
+top_budget[c("title","budget")]
+```
+
+
+```{r}
+highest_revenue_row_index <- which.max(cleaned_data$revenue)
+# Remove the row with the highest revenue
+movies_data_cleaned <- cleaned_data[-highest_revenue_row_index, ]
+# Save the cleaned data frame to a CSV file
+write.csv(movies_data_cleaned, "movies_data_cleaned.csv", row.names = FALSE)
+
+
+```
+
+
+
+
+```{r}
+# Total number of movies
+total_movies <- nrow(cleaned_data)
+
+# Number of movies with budget greater than 15 mil
+movies_greater_than_15 <- sum(cleaned_data$budget > 15)
+
+# Percentage of movies with budget greater than 15
+percentage_greater_than_15 <- (movies_greater_than_15 / total_movies) * 100
+
+# Print the result
+cat("The percentage of movies with budget greater than 15 million:",percentage_greater_than_15)
+```
+
+```{r}
+#removing the rows with budget greater than 15 million
+
+filtered_data <- cleaned_data[cleaned_data$budget <= 15, ]
+summary(filtered_data$budget)
+revenue_boxplot <- boxplot(filtered_data$budget)
+
+```
+
+```{r}
+library(ggplot2)
+
+# Histogram in ggplot2
+ggplot(filtered_data, aes(x = budget))+
+ geom_histogram(aes(y = ..density..),
+  binwidth = 0.5,  # Bin width (e.g., $5M increments)
+                 fill = "limegreen", 
+                 color = "white") +   # Bar outline color
+  labs(title = "Distribution of Movie Budgets",
+       x = "Budget (million USD)",
+       y = "Frequency") +
+  theme_minimal() + 
+  theme(plot.title = element_text(size = 18, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+
+```
+
+```{r}
+top_revenue <- cleaned_data %>%
+  arrange(desc(revenue)) %>%
+  head(50)
+top_revenue[c("title","revenue")]
+```
+
+```{r}
+# Number of movies with revenue greater than 40 mil
+movies_greater_than_40 <- sum(cleaned_data$revenue > 40)
+
+# Percentage of movies with revenue greater than 40
+percentage_greater_than_40 <- (movies_greater_than_40 / total_movies) * 100
+
+# Print the result
+cat("The percentage of movies with revenue greater than 40 million:",percentage_greater_than_40)
+```
+
+```{r}
+filtered_data <- cleaned_data[cleaned_data$revenue <= 40, ]
+summary(filtered_data$revenue)
+revenue_boxplot <- boxplot(filtered_data$revenue)
+
+```
+
+```{r}
+library(ggplot2)
+
+# Histogram in ggplot2
+ggplot(filtered_data, aes(x = revenue))+
+ geom_histogram(aes(y = ..density..),
+  binwidth = 0.5,  # Bin width (e.g., $5M increments)
+                 fill = "limegreen", 
+                 color = "white") +   # Bar outline color
+  labs(title = "Distribution of Movie Revenue",
+       x = "Revenue (million USD)",
+       y = "Frequency") +
+  theme_minimal() + 
+  theme(plot.title = element_text(size = 18, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+```
+
+```{r}
+# Number of movies with revenue greater than 40 mil
+movies_greater_than_40 <- sum(cleaned_data$ROI > 1000)
+
+# Percentage of movies with revenue greater than 40
+percentage_greater_than_40 <- (movies_greater_than_40 / total_movies) * 100
+
+# Print the result
+cat("The percentage of movies with ROI than 40 % :",percentage_greater_than_40)
+```
+
+```{r}
+
+
+
+filtered_data <- cleaned_data[cleaned_data$ROI <= 1000, ]
+# Histogram in ggplot2
+ggplot(filtered_data, aes(x = ROI)) +
+  geom_histogram(aes(y = ..density.., fill = ROI < 0),  # Fill based on negative ROI
+                 binwidth = 15,  
+                 color = "white") +  
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "limegreen"),
+                    labels = c("TRUE" = "Loss", "FALSE" = "Profit")) +  # Custom color mapping
+  labs(title = "Distribution of Movie ROI",
+       x = "ROI (%)",
+       y = "Frequency") +
+  guides(fill = guide_legend(title = "Legend")) + 
+  theme_minimal() + 
+  theme(plot.title = element_text(size = 18, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+```
+
+```{r}
+
+movies_with_profit <- sum(cleaned_data$ROI > 0)
+movies_with_loss <- sum(cleaned_data$ROI < 0)
+
+percentage_of_movies_with_profit <- (movies_with_profit / total_movies) * 100
+percentage_of_movies_with_loss <- (movies_with_loss / total_movies) * 100
+
+cat("The percentage of movies that make profit :",percentage_of_movies_with_profit,"%\n")
+cat("The percentage of movies that make loss :",percentage_of_movies_with_loss,"%")
+```
+
+```{r}
+
+# Find the row index of the movie with the highest budget
+filtered_data <- cleaned_data[cleaned_data$budget <= 50, ]
+# Create a new column 'Profit_Loss_Status' to classify movies as Profit, Loss, or Neutral
+filtered_data$Profit_Loss_Status <- ifelse(filtered_data$revenue > filtered_data$budget, "Profit", 
+                                          ifelse(filtered_data$revenue < filtered_data$budget, "Loss", "Neutral"))
+
+# Scatter plot of Budget vs Revenue
+ggplot(filtered_data, aes(x = budget, y = revenue,color = Profit_Loss_Status)) +
+  geom_point(size = 3, alpha = 0.7) +  # Points with color based on Profit/Loss status
+  scale_color_manual(values = c("Profit" = "limegreen", "Loss" = "red", "Neutral" = "grey")) +  # Custom colors
+  labs(title = "Budget vs Revenue (Profit/Loss/Neutral)", 
+       x = "Budget (million USD)", 
+       y = "Revenue (million USD)") +
+  theme_minimal() + 
+  theme(plot.title = element_text(size = 18, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+
+```
+
+```{r}
+cor_budget_rev <- cor(filtered_data$budget,filtered_data$revenue)
+cat("The correlation coefficient between budget and revenue: ",cor_budget_rev,"\n")
+
+# Test the significance of the correlation coefficient
+correlation_test <- cor.test(filtered_data$budget, filtered_data$revenue)
+# View the result
+correlation_test
+
+```
+
+```{r}
+# Fit a linear regression model
+model <- lm(revenue ~ budget, data = filtered_data)
+summary(model)
+
+```
+
+```{r}
+# Scatter plot with linear regression line
+ggplot(filtered_data, aes(x = budget, y = revenue)) +
+  geom_point(aes(color = Profit_Loss_Status), size = 3, alpha = 0.7) +  # Scatter plot with colored points
+  scale_color_manual(values = c("Profit" = "limegreen", "Loss" = "red", "Neutral" = "grey")) +  # Custom colors
+  geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dotted") +  # Linear regression line
+  labs(title = "Budget vs Revenue with Linear Regression", 
+       x = "Budget (million USD)", 
+       y = "Revenue (million USD)") +
+  theme_minimal() + 
+  theme(plot.title = element_text(size = 18, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+
+
+```
